@@ -33,27 +33,46 @@ export class TicketsController {
   async create(@Body() newTicketDto: newTicketDto) {
     const { type, companyId } = newTicketDto;
 
+    if (type === TicketType.registrationAddressChange) {
+      const exist = await Ticket.findOne({
+        where: { type, companyId },
+      });
+      if (exist) throw new ConflictException('Ticket already exists');
+    }
+
     const category =
       type === TicketType.managementReport
         ? TicketCategory.accounting
         : TicketCategory.corporate;
 
-    const userRole =
+    let userRole =
       type === TicketType.managementReport
         ? UserRole.accountant
         : UserRole.corporateSecretary;
 
-    const assignees = await User.findAll({
+    let assignees = await User.findAll({
       where: { companyId, role: userRole },
       order: [['createdAt', 'DESC']],
     });
+
+    if (!assignees.length && userRole === UserRole.corporateSecretary) {
+      userRole = UserRole.director;
+      const directors = await User.findAll({
+        where: { companyId, role: userRole },
+        order: [['createdAt', 'DESC']],
+      });
+      assignees = directors;
+    }
 
     if (!assignees.length)
       throw new ConflictException(
         `Cannot find user with role ${userRole} to create a ticket`,
       );
 
-    if (userRole === UserRole.corporateSecretary && assignees.length > 1)
+    if (
+      [UserRole.corporateSecretary, UserRole.director].includes(userRole) &&
+      assignees.length > 1
+    )
       throw new ConflictException(
         `Multiple users with role ${userRole}. Cannot create a ticket`,
       );
