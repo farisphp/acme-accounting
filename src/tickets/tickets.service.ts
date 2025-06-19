@@ -1,4 +1,9 @@
-import { Injectable, Inject, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Ticket, TicketStatus, TicketType } from 'db/models/Ticket';
 import { Company } from 'db/models/Company';
 import { User, UserRole } from 'db/models/User';
@@ -19,6 +24,7 @@ export class TicketsService {
 
   async create(ticket: CreateTicketDto) {
     const { type, companyId } = ticket;
+    await this.checkCompany(companyId);
 
     if (
       [TicketType.registrationAddressChange, TicketType.strikeOff].includes(
@@ -86,6 +92,13 @@ export class TicketsService {
 
   findAll() {
     return this.ticketsRepository.findAll({ include: [Company, User] });
+  }
+
+  private async checkCompany(companyId: number) {
+    const exist = await Company.findOne({
+      where: { id: companyId },
+    });
+    if (!exist) throw new NotFoundException('Company not found');
   }
 
   private async checkDuplicate(ticket: CreateTicketDto) {
