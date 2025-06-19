@@ -24,11 +24,8 @@ import {
 export class ReportsConsumer extends WorkerHost {
   async process(job: Job<any, any, string>): Promise<any> {
     switch (job.name) {
-      case 'all':
-        await this.all();
-        break;
       case ALL_REPORT_JOB_NAME:
-        await this.allSeparated();
+        await this.all();
         break;
       case ACCOUNTS_JOB_NAME:
         await this.accounts();
@@ -43,62 +40,7 @@ export class ReportsConsumer extends WorkerHost {
     return {};
   }
 
-  async allSeparated() {}
-
-  async all() {
-    const accountBalances: Record<string, number> = {};
-    const cashByYear: Record<number, number> = {};
-    const balances = this.prepareFSBalance();
-
-    const csvFiles = await this.getCSVFiles({
-      exclude: [
-        ACCOUNT_REPORT_FILE_NAME,
-        FS_REPORT_FILE_NAME,
-        YEARLY_REPORT_FILE_NAME,
-      ],
-    });
-
-    const fileContents = await this.readFiles({ files: csvFiles });
-    fileContents.forEach((content) => {
-      const lines = content.trim().split('\n');
-
-      for (const line of lines) {
-        const [date, account, , debit, credit] = line.split(',');
-        const debitVal = parseFloat(debit || '0');
-        const creditVal = parseFloat(credit || '0');
-        const balance = debitVal - creditVal;
-
-        // accounts operations
-        accountBalances[account] = (accountBalances[account] || 0) + balance;
-
-        // yearly operations
-        if (account === 'Cash') {
-          const year = new Date(date).getFullYear();
-          if (!cashByYear[year]) {
-            cashByYear[year] = 0;
-          }
-          cashByYear[year] += balance;
-        }
-
-        // fs operations
-        if (Object.hasOwn(balances, account)) {
-          balances[account] += balance;
-        }
-      }
-    });
-
-    const [accountsOutput, yearlyOutput, fsOutput] = [
-      this.generateAccountsReport(accountBalances),
-      this.generateYearlyReport(cashByYear),
-      this.generateFSReport(balances),
-    ];
-
-    await Promise.all([
-      fs.promises.writeFile(ACCOUNT_REPORT_PATH, accountsOutput.join('\n')),
-      fs.promises.writeFile(YEARLY_REPORT_PATH, yearlyOutput.join('\n')),
-      fs.promises.writeFile(FS_REPORT_PATH, fsOutput.join('\n')),
-    ]);
-  }
+  async all() {}
 
   async accounts() {
     const accountBalances: Record<string, number> = {};
