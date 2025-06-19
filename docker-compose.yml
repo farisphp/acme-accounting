@@ -10,3 +10,16 @@ services:
       - POSTGRES_DB=task-dev
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+  redis:
+    container_name: redis
+    image: redis:8.0
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/data
+
+volumes:
+  db_data:
+  redis_data:
