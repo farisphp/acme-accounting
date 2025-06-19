@@ -1,13 +1,22 @@
+import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { DbModule } from './db.module';
-import { ReportsController } from './reports/reports.controller';
 import { HealthcheckController } from './healthcheck/healthcheck.controller';
-import { ReportsService } from './reports/reports.service';
+import { ReportsModule } from './reports/reports.module';
 import { TicketsModule } from './tickets/tickets.module';
 
 @Module({
-  imports: [DbModule, TicketsModule],
-  controllers: [ReportsController, HealthcheckController],
-  providers: [ReportsService],
+  imports: [
+    DbModule,
+    BullModule.forRoot({
+      connection: {
+        host: 'localhost',
+        port: 6379,
+      },
+    }),
+    TicketsModule,
+    ReportsModule,
+  ],
+  controllers: [HealthcheckController],
 })
 export class AppModule {}

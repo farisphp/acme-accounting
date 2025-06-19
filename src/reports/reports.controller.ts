@@ -1,25 +1,32 @@
-import { Controller, Get, Post, HttpCode } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  InternalServerErrorException,
+  Param,
+  Post,
+} from '@nestjs/common';
 import { ReportsService } from './reports.service';
 
 @Controller('api/v1/reports')
 export class ReportsController {
   constructor(private reportsService: ReportsService) {}
 
-  @Get()
-  report() {
-    return {
-      'accounts.csv': this.reportsService.state('accounts'),
-      'yearly.csv': this.reportsService.state('yearly'),
-      'fs.csv': this.reportsService.state('fs'),
-    };
+  @Get(':id')
+  async report(@Param('id') id: string) {
+    const res = await this.reportsService.report(id);
+    return res;
   }
 
   @Post()
   @HttpCode(201)
-  generate() {
-    this.reportsService.accounts();
-    this.reportsService.yearly();
-    this.reportsService.fs();
-    return { message: 'finished' };
+  async generate() {
+    const flow = await this.reportsService.generateAll();
+
+    if (!flow) {
+      throw new InternalServerErrorException(`Failed to generate reports`);
+    }
+
+    return { id: flow.job.id };
   }
 }
